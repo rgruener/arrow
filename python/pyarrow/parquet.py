@@ -831,7 +831,7 @@ class ParquetDataset(object):
         self.split_row_groups = split_row_groups
 
         if split_row_groups:
-            raise NotImplementedError("split_row_groups not yet implemented")
+            self._split_row_groups()
 
         if validate_schema:
             self.validate_schemas()
@@ -943,6 +943,49 @@ class ParquetDataset(object):
                                    metadata=meta,
                                    common_metadata=self.common_metadata)
         return open_file
+
+    def _split_row_groups(self):
+        split_pieces = []
+        if self.metadata and self.metadata.num_row_groups > 0:
+            # If we have the summary metadata we make a dictionary of how many
+            # row groups are in each file in order to split them. The Parquet
+            # Metadata file stores paths as the relative path from the dataset
+            # base dir.
+            row_groups_per_file = dict()
+            for i in range(self.metadata.num_row_groups):
+                row_group = self.metadata.row_group(i)
+                path = row_group.column(0).file_path
+                row_groups_per_file[path] = row_groups_per_file.get(path, 0) + 1
+
+            base_path = os.path.normpath(os.path.dirname(self.metadata_path))
+            for piece in self.pieces:
+                # Since the pieces are absolute path, we get the
+                # relative path to the dataset base dir to fetch the
+                # number of row groups in the file
+                relative_path = os.path.relpath(piece.path, base_path)
+
+                # If the path is not in the metadata file, that means there are
+                # no row groups in that file and that file should be skipped
+                if relative_path not in row_groups_per_file:
+                    continue
+
+                for row_group in range(row_groups_per_file[relative_path]):
+                    split_piece = ParquetDatasetPiece(piece.path,
+                                                      row_group,
+                                                      piece.partition_keys)
+                    split_pieces.append(split_piece)
+        else:
+            # Without the summary metadata, we read each parquet footer to retrieve
+            # how many row groups are in each file.
+            split_pieces = []
+            for piece in self.pieces:
+                metadata = piece.get_metadata(lambda path: self.fs.open(path))
+                for row_group in range(metadata.num_row_groups):
+                    split_piece = ParquetDatasetPiece(piece.path,
+                                                      row_group,
+                                                      piece.partition_keys)
+                    split_pieces.append(split_piece)
+        self.pieces = split_pieces
 
     def _filter(self, filters):
         accepts_filter = self.partitions.filter_accepts_partition
