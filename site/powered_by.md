@@ -92,6 +92,7 @@ short description of your use case. See the following for some examples.
   supports reading and writing Parquet files using pyarrow. Several pandas
   core developers are also contributors to Apache Arrow.
 * **[Perspective][23]:** Perspective is a streaming data visualization engine in JavaScript for building real-time & user-configurable analytics entirely in the browser.
+* **[Petastorm][25]:** Petastorm enables single machine or distributed training and evaluation of deep learning models from datasets in Apache Parquet format using pyarrow.
 * **[Quilt Data][13]:** Quilt is a data package manager, designed to make
   managing data as easy as managing code. It supports Parquet format via
   pyarrow for data access.
@@ -141,3 +142,4 @@ short description of your use case. See the following for some examples.
 [22]: https://github.com/Paradigm4/stream
 [23]: https://github.com/jpmorganchase/perspective
 [24]: https://github.com/Paradigm4/accelerated_io_tools
+[25]: https://github.com/uber/petastorm
